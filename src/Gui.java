@@ -19,7 +19,9 @@ public class Gui {
     private JMenuBar menuBar;
     private JPanel loadingScreen;
     private JMenuItem update;
-    int count = 0;
+    private JLabel timeLabel;
+    private JPanel lastUpdatedPanel;
+    private JProgressBar progressBar;
 
 
     public Gui(){
@@ -29,7 +31,14 @@ public class Gui {
         frame.setLayout(new BorderLayout());
         frame.setSize(new Dimension(700, 700));
         loadingScreen = new JPanel();
-        loadingScreen.add(new JLabel("Loading..."));
+        loadingScreen.add(new JLabel("Loading..."), BorderLayout.CENTER);
+        progressBar = new JProgressBar(0,100);
+        progressBar.setValue(0);
+        loadingScreen.add(progressBar, BorderLayout.CENTER);
+        timeLabel = new JLabel();
+        lastUpdatedPanel = new JPanel();
+        lastUpdatedPanel.add(timeLabel);
+        frame.add(lastUpdatedPanel, BorderLayout.SOUTH);
         frame.add(loadingScreen);
         frame.setVisible(true);
         tabbedPane = new JTabbedPane();
@@ -37,10 +46,10 @@ public class Gui {
     }
 
     public void setChannelTab(Channel channel){
-
-        ArrayList<Program> programs = channel.getPrograms();
+        increaseProgressbar(0);
+        ArrayList programs = channel.getPrograms();
         JPanel panel = new JPanel(new BorderLayout());
-        panel.add(new JScrollPane(programPanel(programs)));
+        panel.add(new JScrollPane(programTable(programs)));
         ImageIcon imageIcon = new ImageIcon(channel.getImage());
         Image image = imageIcon.getImage();
         Image newimg = image.getScaledInstance(15, 15,  java.awt.Image.SCALE_SMOOTH);
@@ -50,7 +59,7 @@ public class Gui {
         frame.add(tabbedPane);
     }
 
-    public JTable programPanel(ArrayList<Program> programs){
+    public JTable programTable(ArrayList<Program> programs){
 
         RadioTableModel model = new RadioTableModel();
         JTable table = new JTable(model);
@@ -58,8 +67,6 @@ public class Gui {
         table.setDefaultRenderer(table.getColumnClass(0), new RadioCellRenderer(this.frame));
         table.setDefaultRenderer(table.getColumnClass(1), new RadioCellRenderer(this.frame));
         table.setDefaultRenderer(table.getColumnClass(2), new RadioCellRenderer(this.frame));
-
-
         for(Program program : programs){
 
             model.addRow(program);
@@ -96,6 +103,9 @@ public class Gui {
 
     public void setLast(){
         showLoadingScreen(false);
+        SimpleDateFormat format = new SimpleDateFormat("HH:mm:ss");
+        Date d = new Date();
+        timeLabel.setText("Senast uppdaterad: " + format.format(d));
         frame.setVisible(true);
     }
 
@@ -127,6 +137,7 @@ public class Gui {
     }
 
     public void showLoadingScreen(boolean b){
+        progressBar.setValue(0);
         loadingScreen.setVisible(b);
         loadingScreen.setEnabled(b);
     }
@@ -139,6 +150,10 @@ public class Gui {
 
     public void clear(){
         tabbedPane = new JTabbedPane();
+    }
+
+    public void increaseProgressbar(int amount){
+        progressBar.setValue(amount);
     }
 
 }

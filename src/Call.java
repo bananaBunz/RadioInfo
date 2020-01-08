@@ -39,7 +39,7 @@ public class Call {
      * @param id Id of channel to get tableau.
      * @return Inputstream of tableau as xml data.
      */
-    public InputStream getTableau(String id){
+    public synchronized InputStream getTableau(String id){
 
         Date today = Calendar.getInstance().getTime();
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-M-dd");

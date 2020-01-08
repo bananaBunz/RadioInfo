@@ -32,12 +32,28 @@ public class UpdateListener implements ActionListener {
                 InputStream in = call.getChannels();
                 ArrayList<Channel> channelList = parser.readChannels(in);
 
-                for(Channel ch : channelList){
-                    try{
-                        ArrayList<Program> programs = parser.readChannelTab(call, call.getTableau(ch.getId()));
-                        ch.setPrograms(programs);
-                    }
-                    catch (IOException e){
+                Thread[] t = new Thread[channelList.size()];
+                for(int i = 0; i < channelList.size(); i++){
+
+                    Channel ch = channelList.get(i);
+
+                    t[i] = new Thread(() -> {
+                        try{
+                            Parser temp = new Parser();
+                            ArrayList<Program> programs = temp.readChannelTab(call, call.getTableau(ch.getId()));
+                            ch.setPrograms(programs);
+                        }
+                        catch (IOException e){
+                            e.printStackTrace();
+                        }
+                    });
+                    t[i].start();
+                }
+
+                for(int i = 0; i < channelList.size(); i++){
+                    try {
+                        t[i].join();
+                    } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
                 }

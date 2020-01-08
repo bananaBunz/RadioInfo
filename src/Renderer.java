@@ -36,7 +36,7 @@ class RadioTableModel extends AbstractTableModel{
 
     public Object getValueAt(int row, int col) {
         Program program = (Program) data.elementAt(row);
-        if (col == 0) return program.getName();
+        if (col == 0) return program.getTitle();
 
         else if (col == 1){
             SimpleDateFormat sdf = new SimpleDateFormat("HH:mm");
