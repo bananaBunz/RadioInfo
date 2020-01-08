@@ -42,7 +42,7 @@ public class ParserTest {
             ArrayList programs = parser.readChannelTab(call, call.getTableau(list.get(0).getId()));
             //antalet program kan kommas att variera från dag till dag, detta testet kan därför kommas
             //bli ogiltigt.
-            assertEquals(63, programs.size());
+            assertEquals(49, programs.size());
 
         } catch (IOException e) {
             e.printStackTrace();

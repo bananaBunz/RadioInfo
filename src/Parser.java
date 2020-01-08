@@ -19,6 +19,9 @@ import java.util.Date;
 
 /**
  * Class to be a part of the model in the MvC.
+ * The parser reads xml-inputstreams with a
+ * dom-parser.
+ * @author dv18mln
  */
 
 public class Parser {
@@ -27,6 +30,9 @@ public class Parser {
     private DocumentBuilderFactory factory;
     private DocumentBuilder builder;
 
+    /**
+     * Constructor initialized the document builder.
+     */
     public Parser(){
         try{
             factory = DocumentBuilderFactory.newInstance();
@@ -37,6 +43,13 @@ public class Parser {
         }
     }
 
+    /**
+     * Parsing the inputstream retrieved by the call-class.
+     * The channels and data is parsed and saved to a arraylist.
+     * @see Call
+     * @param in Inputstream to read from.
+     * @return An arraylist with the parsed channels.
+     */
     public ArrayList<Channel> readChannels(InputStream in){
 
         ArrayList<Channel> channelList = new ArrayList<>();
@@ -87,14 +100,20 @@ public class Parser {
     }
 
     /**
+     * Parses the given channels tableu.
+     * Many times the programs is spread across
+     * multiple pages which means the input stream
+     * need to get switch and read the other pages
+     * data. The programs added to the list is only
+     * the programs that has occurred in the previous
+     * 12h or occurs in the next 12h of that day.
      *
      * @param in Inputstream to read from.
+     * @param call Call object to retrieve the next page.
      * @throws IOException If the data could not be read, throws IOException.
      * @return returns arraylist of all programs.
      */
     public ArrayList<Program> readChannelTab(Call call, InputStream in) throws IOException {
-
-
 
         ArrayList<Program> programList = new ArrayList<>();
 
@@ -139,7 +158,6 @@ public class Parser {
 
                     Element imageurl = (Element)element.getElementsByTagName("imageurl").item(0);
 
-                    //Vissa program har inte en bild.
                     if(imageurl != null){
                         try {
                             URL url = new URL(imageurl.getTextContent());
@@ -204,6 +222,14 @@ public class Parser {
         return programList;
     }
 
+    /**
+     * Parses a string to a time object. This is used to determine
+     * whether the program should be added to the list or not,
+     * as the time retrieved from the data/inputstream is read
+     * as a string.
+     * @param timeAsString The times as a string to be parsed.
+     * @return A date-object with the parsed time.
+     */
     public Date parseDate(String timeAsString){
 
         String DATE_FORMAT_PATTERN = "yyyy-MM-dd'T'HH:mm:ss'Z'";

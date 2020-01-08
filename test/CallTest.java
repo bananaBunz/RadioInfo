@@ -12,7 +12,9 @@ public class CallTest {
     }
 
     public void tearDown(){
-
+        call = null;
     }
+
+
 
 }

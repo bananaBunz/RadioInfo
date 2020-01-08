@@ -7,12 +7,16 @@ import java.util.Date;
 
 /**
  * Class to be a part of the model in the MvC.
+ * @author dv18mln
  */
 public class Call {
 
     private URL url;
     private URLConnection con;
 
+    /**
+     * Initialized everything to null.
+     */
     public Call(){
 
         url = null;
@@ -20,6 +24,10 @@ public class Call {
 
     }
 
+    /**
+     * Gets the channels from the Sveriges Radios api.
+     * @return The data as an inputstream.
+     */
     public InputStream getChannels(){
 
         try{
@@ -54,6 +62,13 @@ public class Call {
         }
     }
 
+    /**
+     * Many channels have multiple pages of upcoming
+     * programs. This method gets the next page of
+     * the program-list.
+     * @param pageUrl The url of the next page.
+     * @return The inputstream retrieved from the call.
+     */
     public InputStream getNextTabPage(URL pageUrl){
         try {
             con = pageUrl.openConnection();

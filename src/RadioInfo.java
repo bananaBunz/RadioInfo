@@ -22,6 +22,7 @@ public class RadioInfo extends Thread{
     /**
      * The constructor initializes the gui
      * with a "loading screen".
+     * The gui is initialized on a own thread.
      */
     public RadioInfo(){
 
@@ -46,6 +47,7 @@ public class RadioInfo extends Thread{
      * channel and tableau.
      * Parsing is done on multiple threads to speed
      * up the loading of data.
+     *
      */
     public void init() {
         InputStream in = call.getChannels();
