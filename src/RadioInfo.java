@@ -2,6 +2,8 @@ import javax.swing.*;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Timer;
 
 /**
  * Class to represent the controller in the MvC-model.
@@ -18,22 +20,42 @@ public class RadioInfo extends Thread{
     private Gui gui;
     private Call call;
     private Parser parser;
+    private Timer timer;
+    private final String url = "http://api.sr.se/api/v2/channels";
 
     /**
      * The constructor initializes the gui
      * with a "loading screen".
      * The gui is initialized on a own thread.
+     * After everything is loaded a timer is set
+     * to execute an update every hour.
      */
     public RadioInfo(){
 
         call = new Call();
         parser = new Parser();
+        timer = new Timer();
         //start by setting the menubar before getting data.
         SwingUtilities.invokeLater(()->{
             gui = new Gui();
             gui.setMenuBar();
-            gui.setUpdateListener(new UpdateListener(call, parser, gui));
+            gui.setUpdateListener(new UpdateListener(timer, call, parser, gui));
         });
+        if(parser.shouldUpdate()){
+            initNew();
+        }
+        else{
+            initLocal();
+        }
+
+        Calendar lastupdate = parser.getLastUpdated();
+        lastupdate.add(Calendar.MINUTE, 1);
+        Calendar now = Calendar.getInstance();
+        long delay = (lastupdate.getTimeInMillis()-now.getTimeInMillis());
+        if(delay < 0) delay = 0;
+        System.out.println(delay);
+
+        timer.schedule(new ScheduledUpdate(timer, gui, call, parser), delay);
 
     }
 
@@ -49,8 +71,8 @@ public class RadioInfo extends Thread{
      * up the loading of data.
      *
      */
-    public void init() {
-        InputStream in = call.getChannels();
+    public void initNew() {
+        InputStream in = call.getChannels(url);
         ArrayList<Channel> channelList = parser.readChannels(in);
 
         //thread for every channel, retrieve data simultaneously.
@@ -91,6 +113,23 @@ public class RadioInfo extends Thread{
             gui.setLast();
 
         });
+
+        parser.createDoc(channelList);
+
     }
+
+    public void initLocal(){
+        ArrayList<Channel> channelList = parser.readLocal("channels.xml");
+        SwingUtilities.invokeLater(() -> {
+
+            for(Channel ch : channelList){
+                gui.setChannelTab(ch);
+            }
+
+            gui.setLast();
+
+        });
+    }
+
 
 }

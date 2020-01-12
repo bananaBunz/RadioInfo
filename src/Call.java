@@ -28,11 +28,11 @@ public class Call {
      * Gets the channels from the Sveriges Radios api.
      * @return The data as an inputstream.
      */
-    public InputStream getChannels(){
+    public InputStream getChannels(String url){
 
         try{
-            url = new URL("http://api.sr.se/api/v2/channels");
-            con = url.openConnection();
+            this.url = new URL(url);
+            con = this.url.openConnection();
             return con.getInputStream();
         } catch (IOException e) {
             e.printStackTrace();

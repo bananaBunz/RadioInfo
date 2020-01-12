@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class ParserTest {
 
     Parser parser;
+    String URL = "http://api.sr.se/api/v2/channels";
 
     @BeforeEach
     public void setUp(){
@@ -24,9 +25,8 @@ public class ParserTest {
 
     @Test
     public void testReadChannels(){
-
         Call call = new Call();
-        int size = parser.readChannels(call.getChannels()).size();
+        int size = parser.readChannels(call.getChannels(URL)).size();
         assertEquals(10, size);
     }
 
@@ -35,7 +35,7 @@ public class ParserTest {
 
         Call call = new Call();
 
-        ArrayList<Channel> list = parser.readChannels(call.getChannels());
+        ArrayList<Channel> list = parser.readChannels(call.getChannels(URL));
         assertEquals(10, list.size());
 
         try {
@@ -48,5 +48,11 @@ public class ParserTest {
             e.printStackTrace();
         }
 
+    }
+
+    @Test
+    public void testReadLocal(){
+        ArrayList channels = parser.readLocal("channels.xml");
+        assertEquals(10, channels.size());
     }
 }

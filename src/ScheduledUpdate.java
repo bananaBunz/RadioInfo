@@ -1,50 +1,31 @@
 import javax.swing.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Timer;
+import java.util.TimerTask;
 
 /**
- * Action listener to update the channels and their
- * tableau. The listener reload all channels and their
- * programs: because of this, the listener uses multiple
- * threads to speed up the parsing.
+ * Class to represent a timer to keep the channels and their tableau
+ * up to date. The timer is set to a fixed update rate of one hour.
  * @author dv18mln
  */
-public class UpdateListener implements ActionListener {
+public class ScheduledUpdate extends TimerTask {
 
+    private Timer timer;
+    private Gui gui;
     private Call call;
     private Parser parser;
-    private Gui gui;
-    private Timer timer;
 
-    /**
-     * Constructor sets the already created
-     * gui, call and parser.
-     * @param call Call to be used.
-     * @param parser Parser to be used.
-     * @param gui Gui to be used.
-     */
-    public UpdateListener(Timer timer, Call call, Parser parser, Gui gui){
-
+    public ScheduledUpdate(Timer timer, Gui gui, Call call, Parser parser){
+        this.timer = timer;
+        this.gui = gui;
         this.call = call;
         this.parser = parser;
-        this.gui = gui;
-        this.timer = timer;
-
     }
 
-    /**
-     * Action to happen when the user presses the
-     * update-button.
-     * @param event Event passed from the actionlistener(not used).
-     */
     @Override
-    public void actionPerformed(ActionEvent event) {
-
-        timer.cancel();
+    public void run() {
 
         SwingWorker update = new SwingWorker<Void, Void>() {
             @Override
@@ -96,6 +77,7 @@ public class UpdateListener implements ActionListener {
         };
         update.execute();
 
+        System.out.println("update");
         timer.schedule(new ScheduledUpdate(timer, gui, call, parser), 1000*60);
     }
 }

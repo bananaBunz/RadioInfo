@@ -1,15 +1,17 @@
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
+import org.w3c.dom.*;
 import org.xml.sax.SAXException;
 
 import javax.imageio.ImageIO;
 import javax.xml.parsers.*;
-import java.awt.*;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -29,11 +31,14 @@ public class Parser {
     private Document doc;
     private DocumentBuilderFactory factory;
     private DocumentBuilder builder;
+    private Calendar lastUpdate;
+    private String DATE_FORMAT_PATTERN = "yyyy-MM-dd'T'HH:mm:ss'Z'";
 
     /**
      * Constructor initialized the document builder.
      */
     public Parser(){
+        lastUpdate = null;
         try{
             factory = DocumentBuilderFactory.newInstance();
             builder = factory.newDocumentBuilder();
@@ -79,17 +84,7 @@ public class Parser {
 
                 Element imageElement = (Element)element.getElementsByTagName("image").item(0);
 
-                try {
-
-                    URL url = new URL(imageElement.getTextContent());
-                    Image image = ImageIO.read(url);
-                    ch.setImage(image);
-
-                } catch (MalformedURLException e) {
-                    e.printStackTrace();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                ch.setImage(imageElement.getTextContent());
 
                 channelList.add(ch);
             }
@@ -159,15 +154,7 @@ public class Parser {
                     Element imageurl = (Element)element.getElementsByTagName("imageurl").item(0);
 
                     if(imageurl != null){
-                        try {
-                            URL url = new URL(imageurl.getTextContent());
-                            Image image = ImageIO.read(url);
-                            program.setImage(image);
-                        } catch (MalformedURLException e) {
-                            e.printStackTrace();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
+                        program.setImage(imageurl.getTextContent());
                     }
 
                     Element startElement = (Element)element.getElementsByTagName("starttimeutc").item(0);
@@ -232,7 +219,6 @@ public class Parser {
      */
     public Date parseDate(String timeAsString){
 
-        String DATE_FORMAT_PATTERN = "yyyy-MM-dd'T'HH:mm:ss'Z'";
 
         Date date = null;
         try {
@@ -243,4 +229,200 @@ public class Parser {
         return date;
     }
 
+    public boolean shouldUpdate(){
+
+        File file = new File("channels.xml");
+        if(file.exists()){
+
+            try {
+                doc = builder.parse(file);
+
+                Node node = doc.getDocumentElement();
+                Element element = (Element)node;
+
+                String lastupdateAsString = element.getAttribute("lastupdate");
+
+                Calendar date = Calendar.getInstance();
+                date.setTime(new SimpleDateFormat(DATE_FORMAT_PATTERN).parse(lastupdateAsString));
+                lastUpdate = date;
+                Calendar now = Calendar.getInstance();
+                long differenceMillis = now.getTimeInMillis() - date.getTimeInMillis();
+                long differenceHours = (((differenceMillis)/1000L)/60L)/60L;
+                if(differenceHours >= 1){
+                    return true;
+                }
+                else{
+                    return false;
+                }
+
+            } catch (SAXException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (ParseException e) {
+                e.printStackTrace();
+            }
+
+        }
+        lastUpdate = Calendar.getInstance();
+        return true;
+    }
+
+    public void createDoc(ArrayList<Channel> channelList){
+
+        try{
+            DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
+
+            Document document = docBuilder.newDocument();
+            Element rootElement = document.createElement("channels");
+
+            Date date = new Date();
+
+            Attr attr  = document.createAttribute("lastupdate");
+            SimpleDateFormat format = new SimpleDateFormat(DATE_FORMAT_PATTERN);
+            attr.setValue(format.format(date));
+            rootElement.setAttributeNode(attr);
+            document.appendChild(rootElement);
+
+            for(Channel ch : channelList){
+
+                Element channel = document.createElement("channel");
+                rootElement.appendChild(channel);
+                Attr chName = document.createAttribute("name");
+                chName.setValue(ch.getName());
+                channel.setAttributeNode(chName);
+
+                Element image = document.createElement("image");
+                image.appendChild(document.createTextNode(ch.getImage()));
+                channel.appendChild(image);
+
+                Element programsElement = document.createElement("programs");
+                channel.appendChild(programsElement);
+
+                ArrayList<Program> programs = ch.getPrograms();
+                for(Program program : programs){
+
+                    Element programElement = document.createElement("program");
+
+                    Element progName = document.createElement("title");
+                    progName.appendChild(document.createTextNode(program.getTitle()));
+                    programElement.appendChild(progName);
+
+                    Element progDesc = document.createElement("description");
+                    progDesc.appendChild(document.createTextNode(program.getDescription()));
+                    programElement.appendChild(progDesc);
+                    Element progImage = document.createElement("image");
+                    if(program.getImage() != null){
+                        progImage.appendChild(document.createTextNode(program.getImage()));
+                    }
+                    programElement.appendChild(progImage);
+
+                    Element progStart = document.createElement("starttime");
+                    progStart.appendChild(document.createTextNode(format.format(program.getStartTime())));
+                    programElement.appendChild(progStart);
+
+                    Element progEnd = document.createElement("endtime");
+                    progEnd.appendChild(document.createTextNode(format.format(program.getEndTime())));
+                    programElement.appendChild(progEnd);
+
+                    programsElement.appendChild(programElement);
+                }
+                channel.appendChild(programsElement);
+                rootElement.appendChild(channel);
+            }
+
+            TransformerFactory transformerFactory = TransformerFactory.newInstance();
+            Transformer transformer = transformerFactory.newTransformer();
+
+            //Settings found on https://stackoverflow.com/a/13925622/10617362 to
+            //format you xml-document.
+            transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+            transformer.setOutputProperty(OutputKeys.METHOD, "xml");
+            transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
+
+            DOMSource domSource = new DOMSource(document);
+            StreamResult streamResult = new StreamResult(new File("channels.xml"));
+
+            transformer.transform(domSource, streamResult);
+
+        } catch (ParserConfigurationException e) {
+            e.printStackTrace();
+        } catch (TransformerException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    public ArrayList<Channel> readLocal(String fileName){
+        ArrayList<Channel> channels = new ArrayList<>();
+
+        try {
+            doc = builder.parse(fileName);
+        } catch (SAXException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        /*Läst så länge det finns channels
+        * för varje channel läst programs*/
+
+        NodeList channelNodes = doc.getElementsByTagName("channel");
+
+        for(int i = 0; i < channelNodes.getLength(); i++){
+
+            Node node = channelNodes.item(i);
+
+            if(node.getNodeType() == Node.ELEMENT_NODE){
+                Channel channel = new Channel();
+                Element element = (Element)node;
+                channel.setName(element.getAttribute("name"));
+                channel.setImage(element.getElementsByTagName("image").item(0).getTextContent());
+
+                NodeList programNodes = element.getElementsByTagName("program");
+                ArrayList<Program> programs = new ArrayList<>();
+
+                for(int j = 0; j < programNodes.getLength(); j++){
+
+                    Node programNode = programNodes.item(j);
+
+                    if(programNode.getNodeType() == Node.ELEMENT_NODE){
+
+                        Program program = new Program();
+                        Element progElement = (Element)programNode;
+
+                        program.setTitle(progElement.getElementsByTagName("title").item(0).getTextContent());
+                        program.setDescription(progElement.getElementsByTagName("description").item(0).getTextContent());
+                        program.setImage(progElement.getElementsByTagName("image").item(0).getTextContent());
+
+                        SimpleDateFormat format = new SimpleDateFormat(DATE_FORMAT_PATTERN);
+                        try {
+                            Date starttime = format.parse(progElement.getElementsByTagName("starttime").item(0).getTextContent());
+                            Date endtime = format.parse(progElement.getElementsByTagName("endtime").item(0).getTextContent());
+                            Date now = new Date();
+                            if(now.after(endtime)){
+                                program.setEnded(true);
+                            }
+                            program.setStartTime(starttime);
+                            program.setEndTime(endtime);
+                        } catch (ParseException e) {
+                            e.printStackTrace();
+                        }
+
+                        programs.add(program);
+                    }
+
+                }
+                channel.setPrograms(programs);
+                channels.add(channel);
+            }
+
+        }
+
+        return channels;
+    }
+    public Calendar getLastUpdated(){
+        return lastUpdate;
+    }
 }

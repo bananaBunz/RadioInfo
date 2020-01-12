@@ -3,6 +3,8 @@ import java.awt.*;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -64,11 +66,20 @@ public class Gui {
         ArrayList programs = channel.getPrograms();
         JPanel panel = new JPanel(new BorderLayout());
         panel.add(new JScrollPane(programTable(programs)));
-        ImageIcon imageIcon = new ImageIcon(channel.getImage());
-        Image image = imageIcon.getImage();
-        Image newimg = image.getScaledInstance(15, 15,  java.awt.Image.SCALE_SMOOTH);
-        imageIcon = new ImageIcon(newimg);
+        ImageIcon imageIcon = null;
+        if(channel.getImage() != null){
+            try {
+                imageIcon = new ImageIcon(new URL(channel.getImage()));
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            }
+            if(imageIcon != null){
+                Image image = imageIcon.getImage();
+                Image newimg = image.getScaledInstance(15, 15,  java.awt.Image.SCALE_SMOOTH);
+                imageIcon = new ImageIcon(newimg);
+            }
 
+        }
         tabbedPane.addTab(channel.getName(), imageIcon, panel);
         frame.add(tabbedPane);
     }
@@ -101,11 +112,20 @@ public class Gui {
                 int row = table.rowAtPoint(e.getPoint());
                 Program program = (Program)model.getValueAtRow(row);
                 ImageIcon imageIcon = null;
-                if(program.getImage() != null){
-                    imageIcon = new ImageIcon(program.getImage());
-                    Image image = imageIcon.getImage();
-                    Image newimg = image.getScaledInstance(100, 100,  java.awt.Image.SCALE_SMOOTH);
-                    imageIcon = new ImageIcon(newimg);
+                if(program.getImage().length() > 0){
+                    try {
+                        URL url = new URL(program.getImage());
+                        imageIcon = new ImageIcon(url);
+                        if(imageIcon.getImage() != null){
+                            Image image = imageIcon.getImage();
+                            Image newimg = image.getScaledInstance(100, 100,  java.awt.Image.SCALE_SMOOTH);
+                            imageIcon = new ImageIcon(newimg);
+                        }
+                    } catch (MalformedURLException ex) {
+                        ex.printStackTrace();
+                        imageIcon = null;
+                    }
+
                 }
                 SimpleDateFormat sdf = new SimpleDateFormat("HH:mm");
                 Date startTime = program.getStartTime();
