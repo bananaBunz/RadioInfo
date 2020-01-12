@@ -1,7 +1,6 @@
 import org.w3c.dom.*;
 import org.xml.sax.SAXException;
 
-import javax.imageio.ImageIO;
 import javax.xml.parsers.*;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
@@ -192,11 +191,9 @@ public class Parser {
             }
 
             //get next page
-            //No "nextpage" tag exists on the last page.
             if(i < pageSize-1){
                 try {
                     NodeList page = tabDoc.getElementsByTagName("nextpage");
-                    System.out.println(page.item(0).getTextContent());
                     URL url = new URL(page.item(0).getTextContent());
                     tabDoc = tabBuilder.parse(call.getNextTabPage(url));
                 } catch (SAXException e) {
@@ -229,6 +226,14 @@ public class Parser {
         return date;
     }
 
+    /**
+     * Method to determine if the local saved data should be
+     * updated. If the data has been saved under an hour ago,
+     * there is no need to update it again. If it is over an
+     * hour ago, the method return true to indicate that
+     * there should be a new api call to update the data.
+     * @return boolean if data should be updated.
+     */
     public boolean shouldUpdate(){
 
         File file = new File("channels.xml");
@@ -268,6 +273,14 @@ public class Parser {
         return true;
     }
 
+    /**
+     * Method to save the data retrieved from the api
+     * call. This is stored in a xml-file which can be parsed
+     * quicker than making a the api calls for each time
+     * the program is started. At the first start there
+     * is no saved channels and the api call has to be done.
+     * @param channelList The list of channels and their programs to be saved.
+     */
     public void createDoc(ArrayList<Channel> channelList){
 
         try{
@@ -354,6 +367,16 @@ public class Parser {
 
     }
 
+    /**
+     * Method to read the local saved data.
+     * The method takes the filename as argument.
+     * The data parsed in stored in a list of channels
+     * which can be used by the GUI. This way is faster
+     * then retrieving new information every time the
+     * program is started.
+     * @param fileName Name of file as string.
+     * @return Arraylist of parsed channels.
+     */
     public ArrayList<Channel> readLocal(String fileName){
         ArrayList<Channel> channels = new ArrayList<>();
 
@@ -364,9 +387,6 @@ public class Parser {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-        /*Läst så länge det finns channels
-        * för varje channel läst programs*/
 
         NodeList channelNodes = doc.getElementsByTagName("channel");
 
@@ -422,6 +442,11 @@ public class Parser {
 
         return channels;
     }
+
+    /**
+     * Gets the last time the data was updated.
+     * @return
+     */
     public Calendar getLastUpdated(){
         return lastUpdate;
     }

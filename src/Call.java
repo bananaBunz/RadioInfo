@@ -35,7 +35,7 @@ public class Call {
             con = this.url.openConnection();
             return con.getInputStream();
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("Could not connect to the url");
             return null;
         }
 
@@ -57,7 +57,7 @@ public class Call {
             con = url.openConnection();
             return con.getInputStream();
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("Could not connect to the url");
             return null;
         }
     }
@@ -74,7 +74,7 @@ public class Call {
             con = pageUrl.openConnection();
             return con.getInputStream();
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("Could not connect to the url");
             return null;
         }
     }

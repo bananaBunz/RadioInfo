@@ -27,7 +27,7 @@ public class UpdateListener implements ActionListener {
      * @param parser Parser to be used.
      * @param gui Gui to be used.
      */
-    public UpdateListener(Timer timer, Call call, Parser parser, Gui gui){
+    public UpdateListener(Timer timer,Call call, Parser parser, Gui gui){
 
         this.call = call;
         this.parser = parser;
@@ -43,8 +43,6 @@ public class UpdateListener implements ActionListener {
      */
     @Override
     public void actionPerformed(ActionEvent event) {
-
-        timer.cancel();
 
         SwingWorker update = new SwingWorker<Void, Void>() {
             @Override
@@ -95,7 +93,7 @@ public class UpdateListener implements ActionListener {
             }
         };
         update.execute();
-
-        timer.schedule(new ScheduledUpdate(timer, gui, call, parser), 1000*60);
+        timer = new Timer();
+        timer.schedule(new ScheduledUpdate(timer, gui, call, parser), 1000*60*60);
     }
 }

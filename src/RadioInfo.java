@@ -49,16 +49,15 @@ public class RadioInfo extends Thread{
         }
 
         Calendar lastupdate = parser.getLastUpdated();
-        lastupdate.add(Calendar.MINUTE, 1);
+        lastupdate.add(Calendar.HOUR, 1);
         Calendar now = Calendar.getInstance();
         long delay = (lastupdate.getTimeInMillis()-now.getTimeInMillis());
         if(delay < 0) delay = 0;
-        System.out.println(delay);
-
         timer.schedule(new ScheduledUpdate(timer, gui, call, parser), delay);
 
     }
 
+    /**
     /**
      * Method to handle the gui and model.
      * Retrieving data is done in a order where,
@@ -118,6 +117,14 @@ public class RadioInfo extends Thread{
 
     }
 
+    /**
+     * Method run if there exist a local, saved
+     * version of the channels and their scheduled
+     * programs updated under an hour ago. If it
+     * exits, there is no need to make the API
+     * calls to retrieve new data, we can just load
+     * the local data.
+     */
     public void initLocal(){
         ArrayList<Channel> channelList = parser.readLocal("channels.xml");
         SwingUtilities.invokeLater(() -> {
@@ -130,6 +137,4 @@ public class RadioInfo extends Thread{
 
         });
     }
-
-
 }

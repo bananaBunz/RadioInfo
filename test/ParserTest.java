@@ -23,6 +23,9 @@ public class ParserTest {
         parser = null;
     }
 
+    /**
+     * Test to read the channels.
+     */
     @Test
     public void testReadChannels(){
         Call call = new Call();
@@ -30,6 +33,9 @@ public class ParserTest {
         assertEquals(10, size);
     }
 
+    /**
+     * Test to get the channels tableau.
+     */
     @Test
     public void testGetChannelTab(){
 
@@ -50,9 +56,15 @@ public class ParserTest {
 
     }
 
+    /**
+     * Test to validate if the stored data is parsed correctly.
+     */
     @Test
     public void testReadLocal(){
-        ArrayList channels = parser.readLocal("channels.xml");
+        ArrayList<Channel> channels = parser.readLocal("channels.xml");
         assertEquals(10, channels.size());
+        for(Channel ch : channels){
+            assertTrue(ch.getPrograms().size() > 0);
+        }
     }
 }
