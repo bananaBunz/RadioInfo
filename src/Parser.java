@@ -54,7 +54,7 @@ public class Parser {
      * @param in Inputstream to read from.
      * @return An arraylist with the parsed channels.
      */
-    public ArrayList<Channel> readChannels(InputStream in){
+    public ArrayList<Channel> readChannels(Call call, InputStream in){
 
         ArrayList<Channel> channelList = new ArrayList<>();
 
@@ -66,29 +66,50 @@ public class Parser {
             e.printStackTrace();
         }
 
-        NodeList channels = doc.getElementsByTagName("channel");
+        NodeList pageSizeNode = doc.getElementsByTagName("totalpages");
+        int pageSize = Integer.parseInt(pageSizeNode.item(0).getTextContent());
 
-        for(int i = 0; i < channels.getLength(); i++){
-            Node n = channels.item(i);
+        for(int j = 0; j < pageSize; j++){
 
-            if(n.getNodeType() == Node.ELEMENT_NODE){
-                Channel ch = new Channel();
-                Element element = (Element)n;
+            NodeList channels = doc.getElementsByTagName("channel");
+            for(int i = 0; i < channels.getLength(); i++){
+                Node n = channels.item(i);
 
-                ch.setName(element.getAttribute("name"));
-                ch.setId(element.getAttribute("id"));
+                if(n.getNodeType() == Node.ELEMENT_NODE){
+                    Channel ch = new Channel();
+                    Element element = (Element)n;
 
-                Element tagline = (Element)element.getElementsByTagName("tagline").item(0);
-                ch.setTagLine(tagline.getTextContent());
+                    ch.setName(element.getAttribute("name"));
+                    ch.setId(element.getAttribute("id"));
+                    Element tagline = (Element)element.
+                            getElementsByTagName("tagline").item(0);
+                    ch.setTagLine(tagline.getTextContent());
 
-                Element imageElement = (Element)element.getElementsByTagName("image").item(0);
+                    Element imageElement = (Element)element.
+                            getElementsByTagName("image").item(0);
 
-                ch.setImage(imageElement.getTextContent());
+                    if(imageElement != null){
+                        ch.setImage(imageElement.getTextContent());
+                    }
 
-                channelList.add(ch);
+                    channelList.add(ch);
+                }
+
             }
-
+            //get next page
+            if(j < pageSize-1){
+                try {
+                    NodeList page = doc.getElementsByTagName("nextpage");
+                    doc = builder.parse(call.getChannels(page.
+                            item(0).getTextContent()));
+                } catch (SAXException e) {
+                    System.err.println("Program exited.");
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
         }
+
 
         return channelList;
     }
@@ -107,7 +128,8 @@ public class Parser {
      * @throws IOException If the data could not be read, throws IOException.
      * @return returns arraylist of all programs.
      */
-    public ArrayList<Program> readChannelTab(Call call, InputStream in) throws IOException {
+    public ArrayList<Program>  readChannelTab(Call call, InputStream in)
+            throws IOException {
 
         ArrayList<Program> programList = new ArrayList<>();
 
@@ -127,10 +149,12 @@ public class Parser {
         assert tabDoc != null;
 
         NodeList pageSizeNode = tabDoc.getElementsByTagName("totalpages");
-        int pageSize = Integer.parseInt(pageSizeNode.item(0).getTextContent());
+        int pageSize = Integer.parseInt(pageSizeNode.item(0).
+                getTextContent());
 
         for(int i = 0; i < pageSize; i++){
-            NodeList programNode = tabDoc.getElementsByTagName("scheduledepisode");
+            NodeList programNode = tabDoc.
+                    getElementsByTagName("scheduledepisode");
 
             for(int j = 0; j < programNode.getLength(); j++){
                 boolean shouldBeAdded = true;
@@ -141,22 +165,29 @@ public class Parser {
 
                     Element element = (Element)episodeNode;
 
-                    Element title = (Element)element.getElementsByTagName("title").item(0);
+                    Element title = (Element)element.
+                            getElementsByTagName("title").item(0);
                     program.setTitle(title.getTextContent());
 
-                    Element programElement = (Element)element.getElementsByTagName("program").item(0);
+                    Element programElement = (Element)element.
+                            getElementsByTagName("program").item(0);
                     program.setName(programElement.getAttribute("name"));
 
-                    Element description = (Element)element.getElementsByTagName("description").item(0);
-                    program.setDescription(description.getTextContent());
+                    Element description = (Element)element.
+                            getElementsByTagName("description").item(0);
+                    if(description != null){
+                        program.setDescription(description.getTextContent());
+                    }
 
-                    Element imageurl = (Element)element.getElementsByTagName("imageurl").item(0);
+                    Element imageurl = (Element)element.
+                            getElementsByTagName("imageurl").item(0);
 
                     if(imageurl != null){
                         program.setImage(imageurl.getTextContent());
                     }
 
-                    Element startElement = (Element)element.getElementsByTagName("starttimeutc").item(0);
+                    Element startElement = (Element)element.
+                            getElementsByTagName("starttimeutc").item(0);
                     Calendar calendar = Calendar.getInstance();
                     calendar.add(Calendar.HOUR_OF_DAY, -12);
                     Date beforeDate = calendar.getTime();
@@ -167,9 +198,11 @@ public class Parser {
                     }
                     program.setStartTime(startDate);
 
-                    Element endElement = (Element)element.getElementsByTagName("endtimeutc").item(0);
+                    Element endElement = (Element)element.
+                            getElementsByTagName("endtimeutc").item(0);
                     Date currentDate = new Date();
-                    Date endDate = parseDate(endElement.getTextContent());
+                    Date endDate = parseDate(endElement.
+                            getTextContent());
                     if(currentDate.after(endDate)){
                         program.setEnded(true);
                     }
@@ -177,7 +210,8 @@ public class Parser {
                     calendar = Calendar.getInstance();
                     calendar.add(Calendar.HOUR_OF_DAY, 12);
                     Date afterDate = calendar.getTime();
-                    startDate = parseDate(endElement.getTextContent());
+                    startDate = parseDate(endElement.
+                            getTextContent());
 
                     if(startDate.after(afterDate)){
                         shouldBeAdded = false;
@@ -195,9 +229,9 @@ public class Parser {
                 try {
                     NodeList page = tabDoc.getElementsByTagName("nextpage");
                     URL url = new URL(page.item(0).getTextContent());
-                    tabDoc = tabBuilder.parse(call.getNextTabPage(url));
+                    tabDoc = tabBuilder.parse(call.getNextPage(url));
                 } catch (SAXException e) {
-                    e.printStackTrace();
+                    System.err.println("Program exited.");
                 }
             }
 
@@ -216,14 +250,17 @@ public class Parser {
      */
     public Date parseDate(String timeAsString){
 
-
-        Date date = null;
+        Calendar convertedDate = null;
         try {
-            date = new SimpleDateFormat(DATE_FORMAT_PATTERN).parse(timeAsString);
+            Date date = new SimpleDateFormat(DATE_FORMAT_PATTERN).
+                    parse(timeAsString);
+            convertedDate = Calendar.getInstance();
+            convertedDate.setTime(date);
+            convertedDate.add(Calendar.HOUR, 1);
         } catch (ParseException e) {
             e.printStackTrace();
         }
-        return date;
+        return convertedDate.getTime();
     }
 
     /**
@@ -235,7 +272,6 @@ public class Parser {
      * @return boolean if data should be updated.
      */
     public boolean shouldUpdate(){
-
         File file = new File("channels.xml");
         if(file.exists()){
 
@@ -248,10 +284,12 @@ public class Parser {
                 String lastupdateAsString = element.getAttribute("lastupdate");
 
                 Calendar date = Calendar.getInstance();
-                date.setTime(new SimpleDateFormat(DATE_FORMAT_PATTERN).parse(lastupdateAsString));
+                date.setTime(new SimpleDateFormat(DATE_FORMAT_PATTERN).
+                        parse(lastupdateAsString));
                 lastUpdate = date;
                 Calendar now = Calendar.getInstance();
-                long differenceMillis = now.getTimeInMillis() - date.getTimeInMillis();
+                long differenceMillis = (now.getTimeInMillis() -
+                        date.getTimeInMillis());
                 long differenceHours = (((differenceMillis)/1000L)/60L)/60L;
                 if(differenceHours >= 1){
                     return true;
@@ -284,7 +322,8 @@ public class Parser {
     public void createDoc(ArrayList<Channel> channelList){
 
         try{
-            DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
+            DocumentBuilderFactory docFactory = DocumentBuilderFactory.
+                    newInstance();
             DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
 
             Document document = docBuilder.newDocument();
@@ -300,6 +339,8 @@ public class Parser {
 
             for(Channel ch : channelList){
 
+                if(ch.getPrograms() == null) continue;
+
                 Element channel = document.createElement("channel");
                 rootElement.appendChild(channel);
                 Attr chName = document.createAttribute("name");
@@ -312,34 +353,9 @@ public class Parser {
 
                 Element programsElement = document.createElement("programs");
                 channel.appendChild(programsElement);
-
                 ArrayList<Program> programs = ch.getPrograms();
                 for(Program program : programs){
-
-                    Element programElement = document.createElement("program");
-
-                    Element progName = document.createElement("title");
-                    progName.appendChild(document.createTextNode(program.getTitle()));
-                    programElement.appendChild(progName);
-
-                    Element progDesc = document.createElement("description");
-                    progDesc.appendChild(document.createTextNode(program.getDescription()));
-                    programElement.appendChild(progDesc);
-                    Element progImage = document.createElement("image");
-                    if(program.getImage() != null){
-                        progImage.appendChild(document.createTextNode(program.getImage()));
-                    }
-                    programElement.appendChild(progImage);
-
-                    Element progStart = document.createElement("starttime");
-                    progStart.appendChild(document.createTextNode(format.format(program.getStartTime())));
-                    programElement.appendChild(progStart);
-
-                    Element progEnd = document.createElement("endtime");
-                    progEnd.appendChild(document.createTextNode(format.format(program.getEndTime())));
-                    programElement.appendChild(progEnd);
-
-                    programsElement.appendChild(programElement);
+                    addElement(document, format, programsElement, program);
                 }
                 channel.appendChild(programsElement);
                 rootElement.appendChild(channel);
@@ -359,12 +375,47 @@ public class Parser {
 
             transformer.transform(domSource, streamResult);
 
-        } catch (ParserConfigurationException e) {
-            e.printStackTrace();
-        } catch (TransformerException e) {
+        } catch (ParserConfigurationException | TransformerException e) {
             e.printStackTrace();
         }
 
+    }
+
+    /**
+     * Adds program-elements to the xml-file. The program-tag
+     * contains title, description, image, start and end-time.
+     * @param document Document where the tag should be added.
+     * @param format   Simpledateformat to format the start and end time.
+     * @param programsElement Element to append with a program.
+     * @param program Program containing the information that should be set
+     *                to the program-element.
+     */
+    public void addElement(Document document, SimpleDateFormat format, Element programsElement, Program program) {
+
+        Element programElement = document.createElement("program");
+
+        Element progName = document.createElement("title");
+        progName.appendChild(document.createTextNode(program.getTitle()));
+        programElement.appendChild(progName);
+
+        Element progDesc = document.createElement("description");
+        progDesc.appendChild(document.createTextNode(program.getDescription()));
+        programElement.appendChild(progDesc);
+        Element progImage = document.createElement("image");
+        if(program.getImage() != null){
+            progImage.appendChild(document.createTextNode(program.getImage()));
+        }
+        programElement.appendChild(progImage);
+
+        Element progStart = document.createElement("starttime");
+        progStart.appendChild(document.createTextNode(format.format(program.getStartTime())));
+        programElement.appendChild(progStart);
+
+        Element progEnd = document.createElement("endtime");
+        progEnd.appendChild(document.createTextNode(format.format(program.getEndTime())));
+        programElement.appendChild(progEnd);
+
+        programsElement.appendChild(programElement);
     }
 
     /**

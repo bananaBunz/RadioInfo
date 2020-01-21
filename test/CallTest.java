@@ -1,5 +1,6 @@
 import org.junit.jupiter.api.*;
 
+import java.io.IOException;
 import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -26,11 +27,15 @@ public class CallTest {
     public void testGetChannelTableau(){
         Parser parser = new Parser();
 
-        ArrayList<Channel> list = parser.readChannels(call.getChannels(url));
+        ArrayList<Channel> list = parser.readChannels(call, call.getChannels(url));
         assertEquals(10, list.size());
 
         for(Channel ch : list){
-            assertNotNull(call.getTableau(ch.getId()));
+            try {
+                assertNotNull(call.getTableau(ch.getId()));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
 
     }

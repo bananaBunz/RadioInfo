@@ -4,6 +4,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Timer;
+import java.util.Vector;
 
 /**
  * Class to represent the controller in the MvC-model.
@@ -41,6 +42,15 @@ public class RadioInfo extends Thread{
             gui.setMenuBar();
             gui.setUpdateListener(new UpdateListener(timer, call, parser, gui));
         });
+
+
+    }
+
+    /**
+     * Method to initialize the model and parse the data.
+     */
+    public void init(){
+
         if(parser.shouldUpdate()){
             initNew();
         }
@@ -48,16 +58,18 @@ public class RadioInfo extends Thread{
             initLocal();
         }
 
-        Calendar lastupdate = parser.getLastUpdated();
-        lastupdate.add(Calendar.HOUR, 1);
+        Calendar nextUpdate = parser.getLastUpdated();
+        if(nextUpdate == null){
+            nextUpdate = Calendar.getInstance();
+        }
+        nextUpdate.add(Calendar.HOUR, 1);
         Calendar now = Calendar.getInstance();
-        long delay = (lastupdate.getTimeInMillis()-now.getTimeInMillis());
+        long delay = (nextUpdate.getTimeInMillis()-now.getTimeInMillis());
         if(delay < 0) delay = 0;
         timer.schedule(new ScheduledUpdate(timer, gui, call, parser), delay);
 
     }
 
-    /**
     /**
      * Method to handle the gui and model.
      * Retrieving data is done in a order where,
@@ -70,9 +82,10 @@ public class RadioInfo extends Thread{
      * up the loading of data.
      *
      */
-    public void initNew() {
+    private void initNew() {
         InputStream in = call.getChannels(url);
-        ArrayList<Channel> channelList = parser.readChannels(in);
+        ArrayList<Channel> channelList = parser.readChannels(call, in);
+        System.out.println(channelList.size());
 
         //thread for every channel, retrieve data simultaneously.
         Thread[] t = new Thread[channelList.size()];
@@ -82,35 +95,32 @@ public class RadioInfo extends Thread{
             t[i] = new Thread(() -> {
                 try{
                     Parser temp = new Parser();
-                    ArrayList<Program> programs = temp.readChannelTab(call, call.getTableau(ch.getId()));
+                    ArrayList<Program> programs = temp.readChannelTab(call,
+                            call.getTableau(ch.getId()));
                     ch.setPrograms(programs);
                 }
                 catch (IOException e){
-                    e.printStackTrace();
                 }
+
             });
             t[i].start();
         }
-        int progress = 0;
-        //wait for all
         for(int i = 0; i < channelList.size(); i++){
             try {
                 t[i].join();
-                progress+=100/channelList.size();
-                gui.increaseProgressbar(progress);
+                gui.increaseProgressbar(100/channelList.size());
             } catch (InterruptedException e) {
-                e.printStackTrace();
+                System.err.println("Could not join threads.");
             }
         }
 
-        SwingUtilities.invokeLater(() -> {
-
+        SwingUtilities.invokeLater(()->{
             for(Channel ch : channelList){
                 gui.setChannelTab(ch);
             }
 
             gui.setLast();
-
+            gui.enableUpdate(true);
         });
 
         parser.createDoc(channelList);
@@ -125,16 +135,22 @@ public class RadioInfo extends Thread{
      * calls to retrieve new data, we can just load
      * the local data.
      */
-    public void initLocal(){
+    private void initLocal(){
         ArrayList<Channel> channelList = parser.readLocal("channels.xml");
-        SwingUtilities.invokeLater(() -> {
+        if(channelList == null){
+            initNew();
+            return;
+        }
 
+        SwingUtilities.invokeLater(()->{
             for(Channel ch : channelList){
                 gui.setChannelTab(ch);
+                gui.increaseProgressbar(100/channelList.size());
             }
 
             gui.setLast();
-
+            gui.enableUpdate(true);
         });
+
     }
 }

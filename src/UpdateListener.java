@@ -43,56 +43,48 @@ public class UpdateListener implements ActionListener {
      */
     @Override
     public void actionPerformed(ActionEvent event) {
-
-        SwingWorker update = new SwingWorker<Void, Void>() {
+        timer.cancel();
+        timer.purge();
+        SwingWorker<Void, Void> task = new SwingWorker<Void, Void>() {
             @Override
             protected Void doInBackground() throws Exception {
 
-                gui.showLoadingScreen(true);
+                gui.showLoadingScreen();
+                gui.enableUpdate(false);
                 gui.clear();
 
                 InputStream in = call.getChannels("http://api.sr.se/api/v2/channels");
-                ArrayList<Channel> channelList = parser.readChannels(in);
+                ArrayList<Channel> channelList = parser.readChannels(call, in);
 
-                Thread[] t = new Thread[channelList.size()];
-                for(int i = 0; i < channelList.size(); i++){
+                for (int i = 0; i < channelList.size(); i++) {
 
                     Channel ch = channelList.get(i);
 
-                    t[i] = new Thread(() -> {
-                        try{
-                            Parser temp = new Parser();
-                            ArrayList<Program> programs = temp.readChannelTab(call, call.getTableau(ch.getId()));
-                            ch.setPrograms(programs);
-                        }
-                        catch (IOException e){
-                            e.printStackTrace();
-                        }
-                    });
-                    t[i].start();
-                }
-                int progress = 0;
-                for(int i = 0; i < channelList.size(); i++){
                     try {
-                        t[i].join();
-                        progress+=100/channelList.size();
-                        gui.increaseProgressbar(progress);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
+                        Parser temp = new Parser();
+                        ArrayList<Program> programs = temp.readChannelTab(call, call.getTableau(ch.getId()));
+                        ch.setPrograms(programs);
+                    } catch (IOException e) {
+                        ch.setPrograms(null);
                     }
                 }
 
-                for(Channel ch : channelList){
+                int progress = 0;
+                for (Channel ch : channelList) {
+                    progress+=100/channelList.size();
+                    gui.increaseProgressbar(progress);
                     gui.setChannelTab(ch);
                 }
                 gui.setLast();
 
                 parser.createDoc(channelList);
+                gui.enableUpdate(true);
 
                 return null;
             }
+
         };
-        update.execute();
+        task.execute();
         timer = new Timer();
         timer.schedule(new ScheduledUpdate(timer, gui, call, parser), 1000*60*60);
     }

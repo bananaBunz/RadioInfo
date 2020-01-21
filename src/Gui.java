@@ -24,6 +24,7 @@ public class Gui {
     private JLabel timeLabel;
     private JPanel lastUpdatedPanel;
     private JProgressBar progressBar;
+    private int progressbarValue;
 
     /**
      * The constructor initializes a very simple
@@ -39,19 +40,14 @@ public class Gui {
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLayout(new BorderLayout());
         frame.setSize(new Dimension(700, 700));
-        loadingScreen = new JPanel();
-        loadingScreen.add(new JLabel("Loading..."), BorderLayout.CENTER);
-        progressBar = new JProgressBar(0,100);
-        progressBar.setValue(0);
-        loadingScreen.add(progressBar, BorderLayout.CENTER);
         timeLabel = new JLabel();
         lastUpdatedPanel = new JPanel();
         lastUpdatedPanel.add(timeLabel);
         frame.add(lastUpdatedPanel, BorderLayout.SOUTH);
-        frame.add(loadingScreen);
         frame.setVisible(true);
         tabbedPane = new JTabbedPane();
         update = new JMenuItem("Uppdatera");
+        showLoadingScreen();
     }
 
     /**
@@ -62,9 +58,11 @@ public class Gui {
      * @param channel Channel to be set.
      */
     public void setChannelTab(Channel channel){
-        increaseProgressbar(0);
         ArrayList programs = channel.getPrograms();
         JPanel panel = new JPanel(new BorderLayout());
+        if(programs == null){
+            return;
+        }
         panel.add(new JScrollPane(programTable(programs)));
         ImageIcon imageIcon = null;
         if(channel.getImage() != null){
@@ -101,9 +99,7 @@ public class Gui {
         table.setDefaultRenderer(table.getColumnClass(1), new RadioCellRenderer());
         table.setDefaultRenderer(table.getColumnClass(2), new RadioCellRenderer());
         for(Program program : programs){
-
             model.addRow(program);
-
         }
 
         table.addMouseListener(new MouseAdapter() {
@@ -112,7 +108,7 @@ public class Gui {
                 int row = table.rowAtPoint(e.getPoint());
                 Program program = (Program)model.getValueAtRow(row);
                 ImageIcon imageIcon = null;
-                if(program.getImage().length() > 0){
+                if(program.getImage() != null){
                     try {
                         URL url = new URL(program.getImage());
                         imageIcon = new ImageIcon(url);
@@ -149,7 +145,9 @@ public class Gui {
      * last-updated text.
      */
     public void setLast(){
-        showLoadingScreen(false);
+        loadingScreen.setVisible(false);
+        loadingScreen.setEnabled(false);
+        frame.remove(loadingScreen);
         SimpleDateFormat format = new SimpleDateFormat("HH:mm:ss");
         Date d = new Date();
         timeLabel.setText("Senast uppdaterad: " + format.format(d));
@@ -192,12 +190,15 @@ public class Gui {
     /**
      * Setts and removes the loading screen and
      * setts the value of the progressbar.
-     * @param b Bool to determine if to show or hide the loading screen.
      */
-    public void showLoadingScreen(boolean b){
+    public void showLoadingScreen(){
+        loadingScreen = new JPanel();
+        loadingScreen.add(new JLabel("Loading..."), BorderLayout.CENTER);
+        progressBar = new JProgressBar(0,100);
         progressBar.setValue(0);
-        loadingScreen.setVisible(b);
-        loadingScreen.setEnabled(b);
+        progressbarValue = 0;
+        loadingScreen.add(progressBar, BorderLayout.CENTER);
+        frame.add(loadingScreen);
     }
 
     /**
@@ -213,6 +214,8 @@ public class Gui {
      * channels and their tableau.
      */
     public void clear(){
+        tabbedPane.setVisible(false);
+        tabbedPane.removeAll();
         tabbedPane = new JTabbedPane();
     }
 
@@ -222,7 +225,12 @@ public class Gui {
      * @param amount The amount to set the progressbar to.
      */
     public void increaseProgressbar(int amount){
-        progressBar.setValue(amount);
+        progressbarValue += amount;
+        progressBar.setValue(progressbarValue);
+    }
+
+    public void enableUpdate(boolean b){
+        update.setEnabled(b);
     }
 
 }

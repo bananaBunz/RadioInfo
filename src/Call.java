@@ -1,6 +1,7 @@
 import java.io.*;
 import java.net.URL;
 import java.net.URLConnection;
+import java.sql.Connection;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -47,19 +48,17 @@ public class Call {
      * @param id Id of channel to get tableau.
      * @return Inputstream of tableau as xml data.
      */
-    public synchronized InputStream getTableau(String id){
+    public InputStream getTableau(String id) throws IOException{
 
         Date today = Calendar.getInstance().getTime();
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-M-dd");
         String dateString = formatter.format(today);
-        try{
-            url = new URL("http://api.sr.se/api/v2/scheduledepisodes?channelid="+id+"&date="+dateString);
-            con = url.openConnection();
-            return con.getInputStream();
-        } catch (IOException e) {
-            System.err.println("Could not connect to the url");
-            return null;
-        }
+
+        URL tempUrl = new URL("http://api.sr.se/api/v2/scheduledepisodes?channelid="+id+"&date="+dateString);
+        System.out.println(tempUrl.toString());
+        URLConnection tempCon = tempUrl.openConnection();
+        return tempCon.getInputStream();
+
     }
 
     /**
@@ -69,12 +68,12 @@ public class Call {
      * @param pageUrl The url of the next page.
      * @return The inputstream retrieved from the call.
      */
-    public InputStream getNextTabPage(URL pageUrl){
+    public synchronized InputStream getNextPage(URL pageUrl){
         try {
-            con = pageUrl.openConnection();
-            return con.getInputStream();
+            URLConnection connection = pageUrl.openConnection();
+            return connection.getInputStream();
         } catch (IOException e) {
-            System.err.println("Could not connect to the url");
+            System.err.println("Could not connect to the next page url");
             return null;
         }
     }

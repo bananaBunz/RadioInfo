@@ -29,8 +29,8 @@ public class ParserTest {
     @Test
     public void testReadChannels(){
         Call call = new Call();
-        int size = parser.readChannels(call.getChannels(URL)).size();
-        assertEquals(10, size);
+        int size = parser.readChannels(call, call.getChannels(URL)).size();
+        assertEquals(52, size);
     }
 
     /**
@@ -41,7 +41,7 @@ public class ParserTest {
 
         Call call = new Call();
 
-        ArrayList<Channel> list = parser.readChannels(call.getChannels(URL));
+        ArrayList<Channel> list = parser.readChannels(call, call.getChannels(URL));
         assertEquals(10, list.size());
 
         try {
