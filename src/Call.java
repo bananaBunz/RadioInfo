@@ -3,8 +3,10 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.sql.Connection;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Vector;
 
 /**
  * Class to be a part of the model in the MvC.
@@ -48,17 +50,16 @@ public class Call {
      * @param id Id of channel to get tableau.
      * @return Inputstream of tableau as xml data.
      */
-    public InputStream getTableau(String id) throws IOException{
+    public InputStream getTableau(String id, Date date) throws IOException{
 
-        Date today = Calendar.getInstance().getTime();
+        Vector<InputStream> streams = new Vector<>();
+
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-M-dd");
-        String dateString = formatter.format(today);
-
+        String dateString = formatter.format(date.getTime());
         URL tempUrl = new URL("http://api.sr.se/api/v2/scheduledepisodes?channelid="+id+"&date="+dateString);
-        System.out.println(tempUrl.toString());
         URLConnection tempCon = tempUrl.openConnection();
+        InputStream in = new SequenceInputStream(streams.elements());
         return tempCon.getInputStream();
-
     }
 
     /**

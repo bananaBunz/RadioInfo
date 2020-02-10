@@ -2,6 +2,7 @@ import org.junit.jupiter.api.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Calendar;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -45,7 +46,8 @@ public class ParserTest {
         assertEquals(10, list.size());
 
         try {
-            ArrayList programs = parser.readChannelTab(call, call.getTableau(list.get(0).getId()));
+            Calendar cal = Calendar.getInstance();
+            ArrayList programs = parser.readChannelTab(call, call.getTableau(list.get(0).getId(), cal.getTime()));
             //antalet program kan kommas att variera från dag till dag, detta testet kan därför kommas
             //bli ogiltigt.
             assertEquals(49, programs.size());

@@ -1,9 +1,8 @@
 import javax.swing.*;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
+import java.util.*;
 import java.util.Timer;
-import java.util.TimerTask;
 
 /**
  * Class to represent a timer to keep the channels and their tableau
@@ -30,12 +29,12 @@ public class ScheduledUpdate extends TimerTask {
      * data from the API.
      */
     @Override
-    public void run() {
+    synchronized public void run() {
         timer.cancel();
         timer.purge();
         SwingWorker<Void, Void> task = new SwingWorker<Void, Void>() {
             @Override
-            protected Void doInBackground() throws Exception {
+            protected Void doInBackground() {
 
                 gui.showLoadingScreen();
                 gui.enableUpdate(false);
@@ -51,9 +50,13 @@ public class ScheduledUpdate extends TimerTask {
 
                     try {
                         Parser temp = new Parser();
-                        ArrayList<Program> programs = temp.readChannelTab(call,
-                                call.getTableau(ch.getId()));
-
+                        ArrayList<Program> programs = new ArrayList<>();
+                        for(int j = 0; j <= 1; j++){
+                            Calendar cal = Calendar.getInstance();
+                            cal.add(Calendar.DATE, j);
+                            programs.addAll(temp.readChannelTab(call,
+                                    call.getTableau(ch.getId(), cal.getTime())));
+                        }
                         ch.setPrograms(programs);
                     } catch (IOException e) {
                         e.printStackTrace();
@@ -66,9 +69,11 @@ public class ScheduledUpdate extends TimerTask {
                     gui.increaseProgressbar(progress);
                     gui.setChannelTab(ch);
                 }
-                gui.setLast();
 
+
+                gui.setLast();
                 parser.createDoc(channelList);
+                gui.setLastUpdated(Calendar.getInstance());
                 gui.enableUpdate(true);
 
                 return null;

@@ -1,10 +1,10 @@
 import javax.swing.*;
 import java.io.IOException;
 import java.io.InputStream;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Timer;
-import java.util.Vector;
 
 /**
  * Class to represent the controller in the MvC-model.
@@ -85,7 +85,6 @@ public class RadioInfo extends Thread{
     private void initNew() {
         InputStream in = call.getChannels(url);
         ArrayList<Channel> channelList = parser.readChannels(call, in);
-        System.out.println(channelList.size());
 
         //thread for every channel, retrieve data simultaneously.
         Thread[] t = new Thread[channelList.size()];
@@ -95,11 +94,17 @@ public class RadioInfo extends Thread{
             t[i] = new Thread(() -> {
                 try{
                     Parser temp = new Parser();
-                    ArrayList<Program> programs = temp.readChannelTab(call,
-                            call.getTableau(ch.getId()));
+                    ArrayList<Program> programs = new ArrayList<>();
+                    for(int j = 0; j <= 1; j++){
+                        Calendar cal = Calendar.getInstance();
+                        cal.add(Calendar.DATE, j);
+                        programs.addAll(temp.readChannelTab(call,
+                                call.getTableau(ch.getId(), cal.getTime())));
+                    }
                     ch.setPrograms(programs);
                 }
                 catch (IOException e){
+                    System.err.println("Could not get programs for channel ." + ch.getId());
                 }
 
             });
@@ -114,11 +119,16 @@ public class RadioInfo extends Thread{
             }
         }
 
+
         SwingUtilities.invokeLater(()->{
             for(Channel ch : channelList){
                 gui.setChannelTab(ch);
             }
 
+            //for some reason prints one hour in adv (utc+2)
+            Calendar lastUpdate = parser.getLastUpdated();
+            lastUpdate.add(Calendar.HOUR, -1);
+            gui.setLastUpdated(lastUpdate);
             gui.setLast();
             gui.enableUpdate(true);
         });
@@ -148,6 +158,9 @@ public class RadioInfo extends Thread{
                 gui.increaseProgressbar(100/channelList.size());
             }
 
+            Calendar lastUpdate = parser.getLastUpdated();
+            lastUpdate.add(Calendar.HOUR, -1);
+            gui.setLastUpdated(lastUpdate);
             gui.setLast();
             gui.enableUpdate(true);
         });

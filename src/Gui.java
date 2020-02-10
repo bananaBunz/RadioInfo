@@ -7,6 +7,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 
 /**
@@ -139,6 +140,11 @@ public class Gui {
         return table;
     }
 
+    public void setLastUpdated(Calendar lastUpdate){
+        SimpleDateFormat format = new SimpleDateFormat("HH:mm:ss");
+        timeLabel.setText("Senast uppdaterad: " + format.format(lastUpdate.getTime()));
+    }
+
     /**
      * Method containing settings that should be set last.
      * Hides the loading-screen from the gui and sets the
@@ -148,9 +154,6 @@ public class Gui {
         loadingScreen.setVisible(false);
         loadingScreen.setEnabled(false);
         frame.remove(loadingScreen);
-        SimpleDateFormat format = new SimpleDateFormat("HH:mm:ss");
-        Date d = new Date();
-        timeLabel.setText("Senast uppdaterad: " + format.format(d));
         frame.setVisible(true);
     }
 

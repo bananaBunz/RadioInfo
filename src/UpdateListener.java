@@ -1,9 +1,5 @@
-import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.Timer;
 
 /**
@@ -19,6 +15,7 @@ public class UpdateListener implements ActionListener {
     private Parser parser;
     private Gui gui;
     private Timer timer;
+    private ScheduledUpdate update;
 
     /**
      * Constructor sets the already created
@@ -33,59 +30,15 @@ public class UpdateListener implements ActionListener {
         this.parser = parser;
         this.gui = gui;
         this.timer = timer;
-
+        update = new ScheduledUpdate(timer, gui, call, parser);
     }
 
     /**
-     * Action to happen when the user presses the
-     * update-button.
+     * Run a update throgh scheduleupdate.
      * @param event Event passed from the actionlistener(not used).
      */
     @Override
     public void actionPerformed(ActionEvent event) {
-        timer.cancel();
-        timer.purge();
-        SwingWorker<Void, Void> task = new SwingWorker<Void, Void>() {
-            @Override
-            protected Void doInBackground() throws Exception {
-
-                gui.showLoadingScreen();
-                gui.enableUpdate(false);
-                gui.clear();
-
-                InputStream in = call.getChannels("http://api.sr.se/api/v2/channels");
-                ArrayList<Channel> channelList = parser.readChannels(call, in);
-
-                for (int i = 0; i < channelList.size(); i++) {
-
-                    Channel ch = channelList.get(i);
-
-                    try {
-                        Parser temp = new Parser();
-                        ArrayList<Program> programs = temp.readChannelTab(call, call.getTableau(ch.getId()));
-                        ch.setPrograms(programs);
-                    } catch (IOException e) {
-                        ch.setPrograms(null);
-                    }
-                }
-
-                int progress = 0;
-                for (Channel ch : channelList) {
-                    progress+=100/channelList.size();
-                    gui.increaseProgressbar(progress);
-                    gui.setChannelTab(ch);
-                }
-                gui.setLast();
-
-                parser.createDoc(channelList);
-                gui.enableUpdate(true);
-
-                return null;
-            }
-
-        };
-        task.execute();
-        timer = new Timer();
-        timer.schedule(new ScheduledUpdate(timer, gui, call, parser), 1000*60*60);
+        update.run();
     }
 }

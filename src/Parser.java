@@ -17,6 +17,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.TimeZone;
 
 /**
  * Class to be a part of the model in the MvC.
@@ -32,11 +33,13 @@ public class Parser {
     private DocumentBuilder builder;
     private Calendar lastUpdate;
     private String DATE_FORMAT_PATTERN = "yyyy-MM-dd'T'HH:mm:ss'Z'";
+    private final Object lock;
 
     /**
      * Constructor initialized the document builder.
      */
     public Parser(){
+        lock = new Object();
         lastUpdate = null;
         try{
             factory = DocumentBuilderFactory.newInstance();
@@ -192,10 +195,6 @@ public class Parser {
                     calendar.add(Calendar.HOUR_OF_DAY, -12);
                     Date beforeDate = calendar.getTime();
                     Date startDate = parseDate(startElement.getTextContent());
-
-                    if(startDate.before(beforeDate)){
-                        shouldBeAdded = false;
-                    }
                     program.setStartTime(startDate);
 
                     Element endElement = (Element)element.
@@ -206,13 +205,12 @@ public class Parser {
                     if(currentDate.after(endDate)){
                         program.setEnded(true);
                     }
-
+                    if(endDate.before(beforeDate)){
+                        shouldBeAdded = false;
+                    }
                     calendar = Calendar.getInstance();
                     calendar.add(Calendar.HOUR_OF_DAY, 12);
                     Date afterDate = calendar.getTime();
-                    startDate = parseDate(endElement.
-                            getTextContent());
-
                     if(startDate.after(afterDate)){
                         shouldBeAdded = false;
                     }
@@ -286,7 +284,9 @@ public class Parser {
                 Calendar date = Calendar.getInstance();
                 date.setTime(new SimpleDateFormat(DATE_FORMAT_PATTERN).
                         parse(lastupdateAsString));
+
                 lastUpdate = date;
+
                 Calendar now = Calendar.getInstance();
                 long differenceMillis = (now.getTimeInMillis() -
                         date.getTimeInMillis());
@@ -308,6 +308,7 @@ public class Parser {
 
         }
         lastUpdate = Calendar.getInstance();
+
         return true;
     }
 
@@ -320,65 +321,66 @@ public class Parser {
      * @param channelList The list of channels and their programs to be saved.
      */
     public void createDoc(ArrayList<Channel> channelList){
+        synchronized (lock) {
 
-        try{
-            DocumentBuilderFactory docFactory = DocumentBuilderFactory.
-                    newInstance();
-            DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
+            try {
+                DocumentBuilderFactory docFactory = DocumentBuilderFactory.
+                        newInstance();
+                DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
 
-            Document document = docBuilder.newDocument();
-            Element rootElement = document.createElement("channels");
+                Document document = docBuilder.newDocument();
+                Element rootElement = document.createElement("channels");
 
-            Date date = new Date();
+                Calendar date = Calendar.getInstance();
 
-            Attr attr  = document.createAttribute("lastupdate");
-            SimpleDateFormat format = new SimpleDateFormat(DATE_FORMAT_PATTERN);
-            attr.setValue(format.format(date));
-            rootElement.setAttributeNode(attr);
-            document.appendChild(rootElement);
+                Attr attr = document.createAttribute("lastupdate");
+                SimpleDateFormat format = new SimpleDateFormat(DATE_FORMAT_PATTERN);
+                attr.setValue(format.format(date.getTime()));
+                rootElement.setAttributeNode(attr);
+                document.appendChild(rootElement);
 
-            for(Channel ch : channelList){
+                for (Channel ch : channelList) {
 
-                if(ch.getPrograms() == null) continue;
+                    if (ch.getPrograms() == null) continue;
 
-                Element channel = document.createElement("channel");
-                rootElement.appendChild(channel);
-                Attr chName = document.createAttribute("name");
-                chName.setValue(ch.getName());
-                channel.setAttributeNode(chName);
+                    Element channel = document.createElement("channel");
+                    rootElement.appendChild(channel);
+                    Attr chName = document.createAttribute("name");
+                    chName.setValue(ch.getName());
+                    channel.setAttributeNode(chName);
 
-                Element image = document.createElement("image");
-                image.appendChild(document.createTextNode(ch.getImage()));
-                channel.appendChild(image);
+                    Element image = document.createElement("image");
+                    image.appendChild(document.createTextNode(ch.getImage()));
+                    channel.appendChild(image);
 
-                Element programsElement = document.createElement("programs");
-                channel.appendChild(programsElement);
-                ArrayList<Program> programs = ch.getPrograms();
-                for(Program program : programs){
-                    addElement(document, format, programsElement, program);
+                    Element programsElement = document.createElement("programs");
+                    channel.appendChild(programsElement);
+                    ArrayList<Program> programs = ch.getPrograms();
+                    for (Program program : programs) {
+                        addElement(document, format, programsElement, program);
+                    }
+                    channel.appendChild(programsElement);
+                    rootElement.appendChild(channel);
                 }
-                channel.appendChild(programsElement);
-                rootElement.appendChild(channel);
+
+                TransformerFactory transformerFactory = TransformerFactory.newInstance();
+                Transformer transformer = transformerFactory.newTransformer();
+
+                //Settings found on https://stackoverflow.com/a/13925622/10617362 to
+                //format you xml-document.
+                transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+                transformer.setOutputProperty(OutputKeys.METHOD, "xml");
+                transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
+
+                DOMSource domSource = new DOMSource(document);
+                StreamResult streamResult = new StreamResult(new File("channels.xml"));
+
+                transformer.transform(domSource, streamResult);
+
+            } catch (ParserConfigurationException | TransformerException e) {
+                e.printStackTrace();
             }
-
-            TransformerFactory transformerFactory = TransformerFactory.newInstance();
-            Transformer transformer = transformerFactory.newTransformer();
-
-            //Settings found on https://stackoverflow.com/a/13925622/10617362 to
-            //format you xml-document.
-            transformer.setOutputProperty(OutputKeys.INDENT, "yes");
-            transformer.setOutputProperty(OutputKeys.METHOD, "xml");
-            transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "4");
-
-            DOMSource domSource = new DOMSource(document);
-            StreamResult streamResult = new StreamResult(new File("channels.xml"));
-
-            transformer.transform(domSource, streamResult);
-
-        } catch (ParserConfigurationException | TransformerException e) {
-            e.printStackTrace();
         }
-
     }
 
     /**
@@ -390,7 +392,7 @@ public class Parser {
      * @param program Program containing the information that should be set
      *                to the program-element.
      */
-    public void addElement(Document document, SimpleDateFormat format, Element programsElement, Program program) {
+    private void addElement(Document document, SimpleDateFormat format, Element programsElement, Program program) {
 
         Element programElement = document.createElement("program");
 
