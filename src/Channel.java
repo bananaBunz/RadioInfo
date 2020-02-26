@@ -1,4 +1,4 @@
-import java.awt.*;
+
 import java.net.URL;
 import java.util.ArrayList;
 
@@ -13,7 +13,7 @@ public class Channel {
     private String id;
     private String tagLine;
     private URL audioUrl;
-    private Image image;
+    private String image;
     private ArrayList programs;
 
     /**
@@ -98,7 +98,7 @@ public class Channel {
      * Gets the image associated with the channel.
      * @return The image as a image object.
      */
-    public Image getImage() {
+    public String getImage() {
         return image;
     }
 
@@ -106,7 +106,7 @@ public class Channel {
      * Sets the image of the channel.
      * @param image The image.
      */
-    public void setImage(Image image) {
+    public void setImage(String image) {
         this.image = image;
     }
 

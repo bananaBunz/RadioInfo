@@ -1,9 +1,12 @@
 import java.io.*;
 import java.net.URL;
 import java.net.URLConnection;
+import java.sql.Connection;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Vector;
 
 /**
  * Class to be a part of the model in the MvC.
@@ -28,14 +31,14 @@ public class Call {
      * Gets the channels from the Sveriges Radios api.
      * @return The data as an inputstream.
      */
-    public InputStream getChannels(){
+    public InputStream getChannels(String url){
 
         try{
-            url = new URL("http://api.sr.se/api/v2/channels");
-            con = url.openConnection();
+            this.url = new URL(url);
+            con = this.url.openConnection();
             return con.getInputStream();
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("Could not connect to the url");
             return null;
         }
 
@@ -47,19 +50,16 @@ public class Call {
      * @param id Id of channel to get tableau.
      * @return Inputstream of tableau as xml data.
      */
-    public synchronized InputStream getTableau(String id){
+    public InputStream getTableau(String id, Date date) throws IOException{
 
-        Date today = Calendar.getInstance().getTime();
+        Vector<InputStream> streams = new Vector<>();
+
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-M-dd");
-        String dateString = formatter.format(today);
-        try{
-            url = new URL("http://api.sr.se/api/v2/scheduledepisodes?channelid="+id+"&date="+dateString);
-            con = url.openConnection();
-            return con.getInputStream();
-        } catch (IOException e) {
-            e.printStackTrace();
-            return null;
-        }
+        String dateString = formatter.format(date.getTime());
+        URL tempUrl = new URL("http://api.sr.se/api/v2/scheduledepisodes?channelid="+id+"&date="+dateString);
+        URLConnection tempCon = tempUrl.openConnection();
+        InputStream in = new SequenceInputStream(streams.elements());
+        return tempCon.getInputStream();
     }
 
     /**
@@ -69,12 +69,12 @@ public class Call {
      * @param pageUrl The url of the next page.
      * @return The inputstream retrieved from the call.
      */
-    public InputStream getNextTabPage(URL pageUrl){
+    public synchronized InputStream getNextPage(URL pageUrl){
         try {
-            con = pageUrl.openConnection();
-            return con.getInputStream();
+            URLConnection connection = pageUrl.openConnection();
+            return connection.getInputStream();
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("Could not connect to the next page url");
             return null;
         }
     }

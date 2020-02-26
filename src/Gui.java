@@ -3,8 +3,11 @@ import java.awt.*;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 
 /**
@@ -22,6 +25,7 @@ public class Gui {
     private JLabel timeLabel;
     private JPanel lastUpdatedPanel;
     private JProgressBar progressBar;
+    private int progressbarValue;
 
     /**
      * The constructor initializes a very simple
@@ -37,19 +41,14 @@ public class Gui {
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLayout(new BorderLayout());
         frame.setSize(new Dimension(700, 700));
-        loadingScreen = new JPanel();
-        loadingScreen.add(new JLabel("Loading..."), BorderLayout.CENTER);
-        progressBar = new JProgressBar(0,100);
-        progressBar.setValue(0);
-        loadingScreen.add(progressBar, BorderLayout.CENTER);
         timeLabel = new JLabel();
         lastUpdatedPanel = new JPanel();
         lastUpdatedPanel.add(timeLabel);
         frame.add(lastUpdatedPanel, BorderLayout.SOUTH);
-        frame.add(loadingScreen);
         frame.setVisible(true);
         tabbedPane = new JTabbedPane();
         update = new JMenuItem("Uppdatera");
+        showLoadingScreen();
     }
 
     /**
@@ -59,16 +58,27 @@ public class Gui {
      * and channel-image.
      * @param channel Channel to be set.
      */
-    public void setChannelTab(Channel channel){
-        increaseProgressbar(0);
+    public synchronized void setChannelTab(Channel channel){
         ArrayList programs = channel.getPrograms();
         JPanel panel = new JPanel(new BorderLayout());
+        if(programs == null){
+            return;
+        }
         panel.add(new JScrollPane(programTable(programs)));
-        ImageIcon imageIcon = new ImageIcon(channel.getImage());
-        Image image = imageIcon.getImage();
-        Image newimg = image.getScaledInstance(15, 15,  java.awt.Image.SCALE_SMOOTH);
-        imageIcon = new ImageIcon(newimg);
+        ImageIcon imageIcon = null;
+        if(channel.getImage() != null){
+            try {
+                imageIcon = new ImageIcon(new URL(channel.getImage()));
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            }
+            if(imageIcon != null){
+                Image image = imageIcon.getImage();
+                Image newimg = image.getScaledInstance(15, 15,  java.awt.Image.SCALE_SMOOTH);
+                imageIcon = new ImageIcon(newimg);
+            }
 
+        }
         tabbedPane.addTab(channel.getName(), imageIcon, panel);
         frame.add(tabbedPane);
     }
@@ -90,9 +100,7 @@ public class Gui {
         table.setDefaultRenderer(table.getColumnClass(1), new RadioCellRenderer());
         table.setDefaultRenderer(table.getColumnClass(2), new RadioCellRenderer());
         for(Program program : programs){
-
             model.addRow(program);
-
         }
 
         table.addMouseListener(new MouseAdapter() {
@@ -102,10 +110,19 @@ public class Gui {
                 Program program = (Program)model.getValueAtRow(row);
                 ImageIcon imageIcon = null;
                 if(program.getImage() != null){
-                    imageIcon = new ImageIcon(program.getImage());
-                    Image image = imageIcon.getImage();
-                    Image newimg = image.getScaledInstance(100, 100,  java.awt.Image.SCALE_SMOOTH);
-                    imageIcon = new ImageIcon(newimg);
+                    try {
+                        URL url = new URL(program.getImage());
+                        imageIcon = new ImageIcon(url);
+                        if(imageIcon.getImage() != null){
+                            Image image = imageIcon.getImage();
+                            Image newimg = image.getScaledInstance(100, 100,  java.awt.Image.SCALE_SMOOTH);
+                            imageIcon = new ImageIcon(newimg);
+                        }
+                    } catch (MalformedURLException ex) {
+                        ex.printStackTrace();
+                        imageIcon = null;
+                    }
+
                 }
                 SimpleDateFormat sdf = new SimpleDateFormat("HH:mm");
                 Date startTime = program.getStartTime();
@@ -123,16 +140,20 @@ public class Gui {
         return table;
     }
 
+    public void setLastUpdated(Calendar lastUpdate){
+        SimpleDateFormat format = new SimpleDateFormat("HH:mm:ss");
+        timeLabel.setText("Senast uppdaterad: " + format.format(lastUpdate.getTime()));
+    }
+
     /**
      * Method containing settings that should be set last.
      * Hides the loading-screen from the gui and sets the
      * last-updated text.
      */
     public void setLast(){
-        showLoadingScreen(false);
-        SimpleDateFormat format = new SimpleDateFormat("HH:mm:ss");
-        Date d = new Date();
-        timeLabel.setText("Senast uppdaterad: " + format.format(d));
+        loadingScreen.setVisible(false);
+        loadingScreen.setEnabled(false);
+        frame.remove(loadingScreen);
         frame.setVisible(true);
     }
 
@@ -172,12 +193,15 @@ public class Gui {
     /**
      * Setts and removes the loading screen and
      * setts the value of the progressbar.
-     * @param b Bool to determine if to show or hide the loading screen.
      */
-    public void showLoadingScreen(boolean b){
+    public void showLoadingScreen(){
+        loadingScreen = new JPanel();
+        loadingScreen.add(new JLabel("Loading..."), BorderLayout.CENTER);
+        progressBar = new JProgressBar(0,100);
         progressBar.setValue(0);
-        loadingScreen.setVisible(b);
-        loadingScreen.setEnabled(b);
+        progressbarValue = 0;
+        loadingScreen.add(progressBar, BorderLayout.CENTER);
+        frame.add(loadingScreen);
     }
 
     /**
@@ -193,6 +217,8 @@ public class Gui {
      * channels and their tableau.
      */
     public void clear(){
+        tabbedPane.setVisible(false);
+        tabbedPane.removeAll();
         tabbedPane = new JTabbedPane();
     }
 
@@ -201,8 +227,13 @@ public class Gui {
      * loading the channels.
      * @param amount The amount to set the progressbar to.
      */
-    public void increaseProgressbar(int amount){
-        progressBar.setValue(amount);
+    synchronized public void increaseProgressbar(int amount){
+        progressbarValue += amount;
+        progressBar.setValue(progressbarValue);
+    }
+
+    public void enableUpdate(boolean b){
+        update.setEnabled(b);
     }
 
 }

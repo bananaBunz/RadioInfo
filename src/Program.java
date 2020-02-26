@@ -9,7 +9,7 @@ public class Program {
     private Date startTime;
     private Date endTime;
     private boolean ended;
-    private Image image;
+    private String image;
 
     /**
      * Object to represent a program.
@@ -121,14 +121,14 @@ public class Program {
      * Getter for the programs image.
      * @return the image as image-object.
      */
-    public Image getImage() {
+    public String getImage() {
         return image;
     }
     /**
      * Sets the programs image.
      * @param image the image as image-object.
      */
-    public void setImage(Image image) {
+    public void setImage(String image) {
         this.image = image;
     }
 }
